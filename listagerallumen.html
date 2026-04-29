@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#2B9FA8">
+  <title>Lumen Pessoas — Sistema de Gestão</title>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --lumen:      #2B9FA8;
+      --lumen-mid:  #3BB5BF;
+      --lumen-lt:   #E6F6F7;
+      --lumen-dark: #1D7A82;
+      --accent:     #E8C832;
+      --danger:     #C0392B;
+      --danger-bg:  #FDEDEC;
+      --warn:       #D4890A;
+      --warn-bg:    #FEF5E4;
+      --ok:         #1A7A44;
+      --ok-bg:      #E8F8EE;
+      --border:     rgba(0,0,0,0.09);
+      --surface:    #FFFFFF;
+      --bg:         #F2FAFB;
+      --text:       #1A2B2C;
+      --text-muted: #5F7D80;
+      --sidebar-w:  240px;
+      --topbar-h:   58px;
+    }
+    body.dark-mode {
+      --lumen:      #3EC9D3;
+      --lumen-mid:  #50D8E2;
+      --lumen-lt:   #0E2628;
+      --lumen-dark: #0A1C1E;
+      --accent:     #E8C832;
+      --danger:     #E57373;
+      --danger-bg:  #2D1A1A;
+      --warn:       #FFB74D;
+      --warn-bg:    #2A1E0A;
+      --ok:         #66BB6A;
+      --ok-bg:      #122A16;
+      --border:     rgba(255,255,255,0.09);
+      --surface:    #0F2224;
+      --bg:         #081416;
+      --text:       #D8F0F2;
+      --text-muted: #6A9498;
+    }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+
+    /* AUTH */
+    #auth-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; background:#2BABB5; padding:20px; }
+    .auth-box { background:#fff; border-radius:20px; padding:100px 36px 32px; width:100%; max-width:460px; box-shadow:0 20px 60px rgba(0,0,0,0.22); position:relative; margin-top:100px; }
+    .login-logo-wrap { position:absolute; top:-100px; left:50%; transform:translateX(-50%); display:flex; align-items:center; justify-content:center; }
+    .login-logo-img { width:150px; height:auto; filter:drop-shadow(0 4px 14px rgba(0,0,0,0.25)); }
+    .login-title { font-size:20px; font-weight:400; color:#2B9FA8; text-align:center; margin-bottom:2px; margin-top:4px; }
+    .login-sub { font-size:12px; color:#888; text-align:center; margin-bottom:18px; }
+    .form-group { margin-bottom:16px; }
+    .form-label { font-size:12px; font-weight:700; color:#333; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px; }
+    .form-input, .form-select { width:100%; padding:13px 16px; border:1.5px solid #e0e0e0; border-radius:10px; font-size:15px; color:var(--text); background:var(--surface); transition:border-color 0.15s,box-shadow 0.15s; outline:none; }
+    .form-input:focus, .form-select:focus { border-color:var(--lumen); box-shadow:0 0 0 3px rgba(43,159,168,0.15); }
+    .form-textarea { width:100%; padding:10px 16px; border:1.5px solid #e0e0e0; border-radius:10px; font-size:14px; color:var(--text); background:var(--surface); outline:none; resize:vertical; min-height:80px; font-family:inherit; }
+    .form-textarea:focus { border-color:var(--lumen); box-shadow:0 0 0 3px rgba(43,159,168,0.15); }
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:10px 18px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all 0.15s; }
+    .btn:active { transform:scale(0.98); }
+    .btn:disabled { opacity:0.5; cursor:default; transform:none; }
+    .btn-primary { background:var(--lumen); color:#fff; }
+    .btn-primary:hover:not(:disabled) { background:var(--lumen-mid); }
+    .btn-secondary { background:var(--lumen-lt); color:var(--lumen); }
+    .btn-danger { background:var(--danger-bg); color:var(--danger); }
+    .btn-outline { background:transparent; color:var(--text); border:1.5px solid var(--border); }
+    .btn-outline:hover { background:var(--bg); }
+    .btn-ok { background:var(--ok-bg); color:var(--ok); }
+    .btn-warn { background:var(--warn-bg); color:var(--warn); }
+    .btn-sm { padding:6px 12px; font-size:12px; }
+    .btn-full { width:100%; padding:15px; border-radius:10px; font-size:16px; font-weight:700; margin-top:4px; }
+    .auth-switch { text-align:center; margin-top:22px; font-size:14px; color:#888; }
+    .auth-switch a { color:var(--lumen); font-weight:600; cursor:pointer; text-decoration:none; }
+    .alert { padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px; display:none; }
+    .alert.visible { display:block; }
+    .alert-danger { background:var(--danger-bg); color:var(--danger); }
+    .alert-success { background:var(--ok-bg); color:var(--ok); }
+
+    /* LAYOUT */
+    #app-screen { display:none; min-height:100vh; }
+    .topbar { position:fixed; top:0; left:0; right:0; height:var(--topbar-h); background:linear-gradient(135deg,var(--lumen-dark) 0%,var(--lumen) 60%,var(--lumen-mid) 100%); color:#fff; display:flex; align-items:center; padding:0 20px; z-index:200; gap:16px; box-shadow:0 2px 20px rgba(43,159,168,0.35); }
+    .topbar-brand { display:flex; align-items:center; gap:10px; font-weight:800; font-size:16px; width:var(--sidebar-w); flex-shrink:0; }
+    .topbar-brand-icon { width:34px; height:34px; background:var(--accent); border-radius:10px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(232,200,50,0.4); }
+    .topbar-center { flex:1; }
+    .topbar-page-title { font-size:15px; font-weight:700; opacity:0.95; }
+    .topbar-right { display:flex; align-items:center; gap:12px; }
+    .topbar-user { font-size:13px; opacity:0.85; background:rgba(255,255,255,0.12); padding:4px 10px; border-radius:20px; font-weight:600; }
+    .topbar-logout { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:6px 14px; border-radius:20px; cursor:pointer; font-size:12px; font-weight:700; }
+    .topbar-logout:hover { background:rgba(255,255,255,0.28); }
+    .theme-toggle { background:rgba(255,255,255,0.15); border:none; color:#fff; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .theme-toggle:hover { background:rgba(255,255,255,0.28); }
+    .sidebar { position:fixed; left:0; top:var(--topbar-h); bottom:0; width:var(--sidebar-w); background:var(--surface); border-right:1px solid var(--border); overflow-y:auto; z-index:100; padding:20px 12px 48px; }
+    .sidebar-section { margin-bottom:28px; }
+    .sidebar-section-title { font-size:10px; font-weight:800; color:var(--lumen); text-transform:uppercase; letter-spacing:1px; padding:0 10px; margin-bottom:8px; }
+    .sidebar-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:500; color:var(--text-muted); transition:all 0.15s; margin-bottom:2px; border:none; background:none; width:100%; text-align:left; }
+    .sidebar-item:hover { background:var(--lumen-lt); color:var(--lumen); transform:translateX(2px); }
+    .sidebar-item.active { background:linear-gradient(90deg,var(--lumen-lt) 0%,rgba(43,159,168,0.08) 100%); color:var(--lumen); font-weight:700; box-shadow:inset 3px 0 0 var(--lumen); }
+    .sidebar-item svg { width:16px; height:16px; flex-shrink:0; }
+    .sidebar-badge { margin-left:auto; background:var(--danger); color:#fff; font-size:10px; font-weight:700; padding:2px 6px; border-radius:10px; }
+    .main-content { margin-left:var(--sidebar-w); margin-top:var(--topbar-h); padding:24px; min-height:calc(100vh - var(--topbar-h)); }
+    .page { display:none; }
+    .page.active { display:block; }
+    .page-header { margin-bottom:28px; padding-bottom:16px; border-bottom:2px solid var(--lumen-lt); display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .page-title { font-size:24px; font-weight:800; color:var(--text); margin-bottom:4px; }
+    .page-sub { font-size:13px; color:var(--text-muted); }
+
+    /* CARDS */
+    .card { background:var(--surface); border-radius:14px; border:1px solid var(--border); overflow:hidden; }
+    .card:hover { box-shadow:0 4px 18px rgba(43,159,168,0.1); }
+    .card-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg,var(--surface) 0%,var(--lumen-lt) 100%); }
+    .card-header-title { font-size:14px; font-weight:800; color:var(--text); }
+    .card-header-sub { font-size:12px; color:var(--text-muted); }
+    .card-body { padding:20px; }
+
+    /* STATS */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; margin-bottom:24px; }
+    .stat-card { background:var(--surface); border-radius:14px; border:1px solid var(--border); padding:18px 18px 14px; position:relative; overflow:hidden; transition:box-shadow 0.18s,transform 0.18s; }
+    .stat-card:hover { box-shadow:0 6px 24px rgba(43,159,168,0.12); transform:translateY(-2px); }
+    .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--lumen); border-radius:14px 14px 0 0; }
+    .stat-card-danger::before { background:var(--danger); }
+    .stat-card-warn::before { background:var(--warn); }
+    .stat-card-ok::before { background:var(--ok); }
+    .stat-card-accent::before { background:var(--accent); }
+    .stat-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }
+    .stat-value { font-size:32px; font-weight:800; color:var(--text); line-height:1; margin-bottom:4px; }
+    .stat-value.ok { color:var(--ok); }
+    .stat-value.danger { color:var(--danger); }
+    .stat-value.warn { color:var(--warn); }
+    .stat-value.lumen { color:var(--lumen); }
+    .stat-desc { font-size:11px; color:var(--text-muted); margin-top:4px; }
+
+    /* TABLE */
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    thead th { padding:10px 14px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px; border-bottom:1px solid var(--border); white-space:nowrap; }
+    tbody td { padding:11px 14px; border-bottom:1px solid var(--border); color:var(--text); vertical-align:middle; }
+    tbody tr:last-child td { border-bottom:none; }
+    tbody tr:hover { background:var(--bg); }
+
+    /* BADGES */
+    .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
+    .badge-ativo { background:var(--ok-bg); color:var(--ok); }
+    .badge-inativo { background:#F3F4F6; color:#6B7280; }
+    .badge-db { background:var(--danger-bg); color:var(--danger); }
+    .badge-vol { background:var(--lumen-lt); color:var(--lumen); }
+    .badge-csd { background:var(--warn-bg); color:var(--warn); }
+    .badge-csf { background:#EDE9FE; color:#7C3AED; }
+    .badge-ok { background:var(--ok-bg); color:var(--ok); }
+    .badge-danger { background:var(--danger-bg); color:var(--danger); }
+    .badge-warn { background:var(--warn-bg); color:var(--warn); }
+    .badge-gray { background:#F3F4F6; color:#6B7280; }
+
+    /* MODAL */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:500; display:flex; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
+    .modal-overlay.hidden { display:none; }
+    .modal { background:var(--surface); border-radius:16px; width:100%; max-width:800px; box-shadow:0 20px 60px rgba(0,0,0,0.25); margin:auto; }
+    .modal-header { padding:20px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .modal-title { font-size:18px; font-weight:800; color:var(--text); }
+    .modal-close { background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-muted); line-height:1; }
+    .modal-body { padding:24px; max-height:70vh; overflow-y:auto; }
+    .modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+
+    /* FORM GRID */
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+    .form-col-full { grid-column:1/-1; }
+    .form-section-title { font-size:12px; font-weight:800; color:var(--lumen); text-transform:uppercase; letter-spacing:0.8px; margin:20px 0 12px; padding-bottom:6px; border-bottom:1px solid var(--lumen-lt); }
+
+    /* SEARCH BAR */
+    .search-bar { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:16px; }
+    .search-bar .form-group { margin:0; min-width:180px; flex:1; }
+    .search-input-wrap { position:relative; }
+    .search-input-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted); width:16px; height:16px; }
+    .search-input-wrap input { padding-left:36px; }
+
+    /* EXPORT */
+    .export-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; background:var(--ok-bg); color:var(--ok); border:1px solid var(--ok); border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
+    .export-btn:hover { background:var(--ok); color:#fff; }
+
+    /* TOAST */
+    #toast-container { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+    .toast { background:var(--text); color:var(--surface); padding:12px 18px; border-radius:10px; font-size:13px; font-weight:600; box-shadow:0 4px 20px rgba(0,0,0,0.2); animation:slideIn 0.2s ease; max-width:340px; }
+    @keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+
+    /* UPLOAD */
+    .upload-area { border:2px dashed var(--border); border-radius:12px; padding:32px; text-align:center; cursor:pointer; transition:all 0.2s; background:var(--surface); }
+    .upload-area:hover, .upload-area.dragover { border-color:var(--lumen); background:var(--lumen-lt); }
+    .upload-icon { font-size:40px; margin-bottom:10px; }
+    .upload-title { font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px; }
+    .upload-sub { font-size:12px; color:var(--text-muted); }
+
+    /* DARK MODE FIXES */
+    body.dark-mode #auth-screen { background:linear-gradient(145deg,#040D0E 0%,#081416 60%,#0F2224 100%); }
+    body.dark-mode .auth-box { background:var(--surface); }
+    body.dark-mode .topbar { background:#071415; border-bottom:1px solid rgba(62,201,211,0.15); }
+    body.dark-mode .sidebar { background:#0A1C1E; border-right-color:rgba(62,201,211,0.1); }
+    body.dark-mode .modal { background:var(--surface); }
+    body.dark-mode .form-input, body.dark-mode .form-select, body.dark-mode .form-textarea { background:#141926; color:var(--text); border-color:rgba(255,255,255,0.12); }
+    body.dark-mode tbody tr:hover { background:rgba(255,255,255,0.04); }
+    body.dark-mode .badge-inativo, body.dark-mode .badge-gray { background:#2A2F3D; color:#A0A8B8; }
+
+    /* INDICADOR CARD SPECIAL */
+    .kpi-big { font-size:48px; font-weight:900; line-height:1; }
+    .casa-chip { display:inline-block; background:var(--lumen-lt); color:var(--lumen); padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700; margin:2px; }
+    .progress-bar-wrap { background:var(--border); border-radius:4px; height:8px; overflow:hidden; margin-top:6px; }
+    .progress-bar { height:100%; border-radius:4px; background:var(--lumen); transition:width 0.4s; }
+    .spinner { width:20px; height:20px; border:2px solid rgba(255,255,255,0.4); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .empty-state { text-align:center; padding:48px 24px; color:var(--text-muted); }
+    .empty-state-icon { font-size:48px; margin-bottom:12px; }
+    .empty-state-title { font-size:16px; font-weight:700; margin-bottom:6px; }
+    .tag-list { display:flex; flex-wrap:wrap; gap:4px; }
+    .info-row { display:flex; gap:8px; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+    .info-row:last-child { border-bottom:none; }
+    .info-label { font-weight:700; color:var(--text-muted); min-width:160px; font-size:12px; text-transform:uppercase; letter-spacing:0.4px; }
+    .info-value { color:var(--text); flex:1; }
+
+    @media (max-width:768px) {
+      .sidebar { display:none; }
+      .main-content { margin-left:0; padding:16px; }
+      .form-grid { grid-template-columns:1fr; }
+      .form-grid-3 { grid-template-columns:1fr; }
+      .stats-grid { grid-template-columns:repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="login-logo-wrap">
+      <img class="login-logo-img" src="https://i.imgur.com/QCvDERA.png" alt="Obra Lumen" onerror="this.style.display='none'">
+    </div>
+    <div class="login-title">Obra Lumen</div>
+    <div class="login-sub">Sistema de Gestão de Pessoas</div>
+    <div id="auth-error" class="alert alert-danger"></div>
+    <div class="form-group">
+      <label class="form-label">E-mail</label>
+      <input type="email" class="form-input" id="auth-email" placeholder="seu@email.com" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <input type="password" class="form-input" id="auth-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()" id="btn-login">Entrar</button>
+  </div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="app-screen">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1A2B2C" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      Lumen Pessoas
+    </div>
+    <div class="topbar-center">
+      <div class="topbar-page-title" id="topbar-title">Dashboard</div>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-user" id="topbar-user"></span>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <button class="topbar-logout" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Visão Geral</div>
+      <button class="sidebar-item active" data-page="dashboard" onclick="goPage('dashboard',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Indicadores
+      </button>
+      <button class="sidebar-item" data-page="por-casa" onclick="goPage('por-casa',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Por Casa
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Pessoas</div>
+      <button class="sidebar-item" data-page="lista" onclick="goPage('lista',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Lista Geral
+        <span class="sidebar-badge hidden" id="badge-ativos">0</span>
+      </button>
+      <button class="sidebar-item" data-page="novo" onclick="abrirFormPessoa(null);goPage('novo',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Nova Pessoa
+      </button>
+      <button class="sidebar-item" data-page="movimentacoes" onclick="goPage('movimentacoes',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Movimentações
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Dados</div>
+      <button class="sidebar-item" data-page="importar" onclick="goPage('importar',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Importar Excel
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- PAGE: DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Indicadores Gerais</div>
+          <div class="page-sub">Visão consolidada de todas as pessoas em acolhimento</div>
+        </div>
+        <button class="export-btn" onclick="exportarExcel()">📥 Exportar Excel</button>
+      </div>
+
+      <div class="stats-grid" id="dash-kpis">
+        <div class="stat-card stat-card-ok">
+          <div class="stat-label">✅ Ativos</div>
+          <div class="stat-value ok kpi-big" id="kpi-ativos">—</div>
+          <div class="stat-desc">acolhidos ativos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">👥 Total Geral</div>
+          <div class="stat-value lumen kpi-big" id="kpi-total">—</div>
+          <div class="stat-desc" id="kpi-total-sub">—</div>
+        </div>
+        <div class="stat-card stat-card-danger">
+          <div class="stat-label">❌ Inativos</div>
+          <div class="stat-value danger" id="kpi-inativos">—</div>
+          <div class="stat-desc">desligados</div>
+        </div>
+        <div class="stat-card stat-card-accent">
+          <div class="stat-label">🌱 Voluntários</div>
+          <div class="stat-value" id="kpi-vol">—</div>
+          <div class="stat-desc">em serviço voluntário</div>
+        </div>
+        <div class="stat-card stat-card-warn">
+          <div class="stat-label">📋 CSD/CSF/DB</div>
+          <div class="stat-value warn" id="kpi-outros">—</div>
+          <div class="stat-desc">outros status</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🏠 Casas Ativas</div>
+          <div class="stat-value lumen" id="kpi-casas">—</div>
+          <div class="stat-desc">casas com pessoas ativas</div>
+        </div>
+        <div class="stat-card stat-card-ok">
+          <div class="stat-label">👨 Masculino</div>
+          <div class="stat-value ok" id="kpi-masc">—</div>
+          <div class="stat-desc">ativos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">👩 Feminino</div>
+          <div class="stat-value lumen" id="kpi-fem">—</div>
+          <div class="stat-desc">ativas</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div class="card">
+          <div class="card-header"><div class="card-header-title">🏠 Ativos por Casa</div></div>
+          <div class="card-body"><div style="position:relative;height:280px;"><canvas id="chart-por-casa"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-header-title">📊 Distribuição por Status</div></div>
+          <div class="card-body"><div style="position:relative;height:280px;"><canvas id="chart-status"></canvas></div></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div class="card">
+          <div class="card-header"><div class="card-header-title">📅 Entradas por Mês (últimos 12 meses)</div></div>
+          <div class="card-body"><div style="position:relative;height:220px;"><canvas id="chart-entradas"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-header-title">🚪 Motivos de Saída</div></div>
+          <div class="card-body"><div style="position:relative;height:220px;"><canvas id="chart-motivos"></canvas></div></div>
+        </div>
+      </div>
+
+      <!-- Benefícios -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header"><div class="card-header-title">💳 Benefícios dos Ativos</div></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;" id="dash-beneficios"></div>
+        </div>
+      </div>
+
+      <!-- Top casas por dias conosco -->
+      <div class="card">
+        <div class="card-header"><div class="card-header-title">🏆 Mais Tempo Conosco (Ativos)</div></div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Nome</th><th>Casa</th><th>Dias Conosco</th><th>Entrada</th><th>Status</th></tr></thead>
+              <tbody id="dash-top-dias"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: POR CASA -->
+    <div class="page" id="page-por-casa">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Por Casa</div>
+          <div class="page-sub">Visão detalhada de cada casa de acolhimento</div>
+        </div>
+      </div>
+      <div id="casas-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
+    </div>
+
+    <!-- PAGE: LISTA -->
+    <div class="page" id="page-lista">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Lista Geral</div>
+          <div class="page-sub" id="lista-count">Carregando...</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="export-btn" onclick="exportarExcel()">📥 Exportar Excel</button>
+          <button class="btn btn-primary btn-sm" onclick="abrirFormPessoa(null)">+ Nova Pessoa</button>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-body">
+          <div class="search-bar">
+            <div class="form-group" style="min-width:220px;flex:2;">
+              <label class="form-label">Buscar</label>
+              <div class="search-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" class="form-input" id="filtro-busca" placeholder="Nome, CPF, nº registro..." oninput="filtrarLista()">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select class="form-select" id="filtro-status" onchange="filtrarLista()">
+                <option value="">Todos</option>
+                <option value="Ativo">✅ Ativo</option>
+                <option value="Inativo">❌ Inativo</option>
+                <option value="Vol">🌱 Voluntário</option>
+                <option value="DB">📋 DB</option>
+                <option value="CSD">📋 CSD</option>
+                <option value="CSF">📋 CSF</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Classificação</label>
+              <select class="form-select" id="filtro-class" onchange="filtrarLista()">
+                <option value="">Todas</option>
+                <option>Acolhido(a)</option>
+                <option>Voluntário(a)</option>
+                <option>Coordenador(a)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Casa</label>
+              <select class="form-select" id="filtro-casa" onchange="filtrarLista()">
+                <option value="">Todas</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Gênero</label>
+              <select class="form-select" id="filtro-genero" onchange="filtrarLista()">
+                <option value="">Todos</option>
+                <option>Masculino</option>
+                <option>Feminino</option>
+              </select>
+            </div>
+            <div style="align-self:flex-end;">
+              <button class="btn btn-outline btn-sm" onclick="limparFiltros()">Limpar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nº Reg.</th>
+                  <th>Nome</th>
+                  <th>Status</th>
+                  <th>Classificação</th>
+                  <th>Casa</th>
+                  <th>Gênero</th>
+                  <th>Entrada</th>
+                  <th>Dias</th>
+                  <th style="text-align:center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="lista-tbody">
+                <tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-muted);">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: NOVA/EDITAR PESSOA -->
+    <div class="page" id="page-novo">
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="form-page-title">Nova Pessoa</div>
+          <div class="page-sub">Preencha todos os dados disponíveis</div>
+        </div>
+        <button class="btn btn-outline" onclick="goPage('lista',null)">← Voltar</button>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <input type="hidden" id="form-id">
+
+          <div class="form-section-title">Identificação</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Nº de Registro</label>
+              <input type="text" class="form-input" id="form-registro" placeholder="Ex: 28442">
+            </div>
+            <div class="form-group form-col-full" style="grid-column:span 2;">
+              <label class="form-label">Nome Completo *</label>
+              <input type="text" class="form-input" id="form-nome" placeholder="Nome completo">
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Status *</label>
+              <select class="form-select" id="form-status">
+                <option value="Ativo">✅ Ativo</option>
+                <option value="Inativo">❌ Inativo</option>
+                <option value="Vol">🌱 Voluntário</option>
+                <option value="DB">DB</option>
+                <option value="CSD">CSD</option>
+                <option value="CSF">CSF</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Classificação</label>
+              <select class="form-select" id="form-classificacao">
+                <option>Acolhido(a)</option>
+                <option>Voluntário(a)</option>
+                <option>Coordenador(a)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Gênero</label>
+              <select class="form-select" id="form-genero">
+                <option>Masculino</option>
+                <option>Feminino</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Data de Nascimento</label>
+              <input type="date" class="form-input" id="form-nascimento">
+            </div>
+          </div>
+
+          <div class="form-section-title">Documentos</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">CPF</label>
+              <input type="text" class="form-input" id="form-cpf" placeholder="000.000.000-00">
+            </div>
+            <div class="form-group">
+              <label class="form-label">RG</label>
+              <input type="text" class="form-input" id="form-rg">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Doc com Foto?</label>
+              <select class="form-select" id="form-doc-foto">
+                <option value="">—</option>
+                <option value="SIM">SIM</option>
+                <option value="NÃO">NÃO</option>
+                <option value="EM PROCESSO">EM PROCESSO</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Alfabetizado?</label>
+              <select class="form-select" id="form-alfabetizado">
+                <option value="">—</option>
+                <option>SIM</option><option>NÃO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Validação Assistente Social</label>
+              <input type="text" class="form-input" id="form-assist-social" placeholder="">
+            </div>
+          </div>
+
+          <div class="form-section-title">Família</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Nome da Mãe</label>
+              <input type="text" class="form-input" id="form-mae">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Endereço</label>
+              <input type="text" class="form-input" id="form-endereco">
+            </div>
+          </div>
+
+          <div class="form-section-title">Acolhimento</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Casa de Acolhimento *</label>
+              <input type="text" class="form-input" id="form-casa" placeholder="Ex: Fraternitas - CE">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Casa que Serve Atualmente</label>
+              <input type="text" class="form-input" id="form-casa-serve">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Servindo em Alguma Casa?</label>
+              <select class="form-select" id="form-servindo">
+                <option value="">—</option>
+                <option>Sim</option><option>Não</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Data de Entrada</label>
+              <input type="date" class="form-input" id="form-entrada">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dias a Descontar</label>
+              <input type="number" class="form-input" id="form-dias-desc" placeholder="0">
+            </div>
+          </div>
+
+          <div class="form-section-title">Transferências</div>
+          <div class="form-grid" style="grid-template-columns:repeat(4,1fr);">
+            <div class="form-group">
+              <label class="form-label">Transferência 1</label>
+              <input type="date" class="form-input" id="form-transf1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Transferência 2</label>
+              <input type="date" class="form-input" id="form-transf2">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Transferência 3</label>
+              <input type="date" class="form-input" id="form-transf3">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Transferência 4</label>
+              <input type="date" class="form-input" id="form-transf4">
+            </div>
+          </div>
+
+          <div class="form-section-title">Experiência Missionária / Voluntariado</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Início Exp. Missionária</label>
+              <input type="date" class="form-input" id="form-exp-miss">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Início Voluntariado</label>
+              <input type="date" class="form-input" id="form-vol-inicio">
+            </div>
+          </div>
+
+          <div class="form-section-title">Saída</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Data de Saída</label>
+              <input type="date" class="form-input" id="form-saida">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Motivo da Saída</label>
+              <select class="form-select" id="form-motivo">
+                <option value="">—</option>
+                <option>Pediu Desligamento</option>
+                <option>Desligado</option>
+                <option>Concluiu a caminhada</option>
+                <option>Transferido para outra comunidade</option>
+                <option>Iniciou ressocialização</option>
+                <option>Iniciou formação missionária</option>
+                <option>Voluntário</option>
+                <option>Outros</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Motivo Específico</label>
+              <select class="form-select" id="form-motivo-esp">
+                <option value="">—</option>
+                <option>Abstinência</option>
+                <option>Não se adaptou as normas</option>
+                <option>Informou que iria voltar para a familia</option>
+                <option>Informou que iria voltar a trabalhar</option>
+                <option>Agressão</option>
+                <option>Ameaça</option>
+                <option>Outros</option>
+              </select>
+            </div>
+            <div class="form-group form-col-full">
+              <label class="form-label">Observação de Saída</label>
+              <textarea class="form-textarea" id="form-obs-saida" rows="2"></textarea>
+            </div>
+          </div>
+
+          <div class="form-section-title">Saúde e Benefícios</div>
+          <div class="form-grid" style="grid-template-columns:repeat(3,1fr);">
+            <div class="form-group">
+              <label class="form-label">Tem Cadastro iClinic?</label>
+              <select class="form-select" id="form-iclinic">
+                <option value="">—</option><option>SIM</option><option>NÃO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Direito a Plano de Saúde?</label>
+              <select class="form-select" id="form-plano-dir">
+                <option value="">—</option><option>SIM</option><option>NÃO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tem Plano de Saúde?</label>
+              <select class="form-select" id="form-plano">
+                <option value="">—</option><option>SIM</option><option>NÃO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tem Caju?</label>
+              <select class="form-select" id="form-caju">
+                <option value="">—</option><option>SIM</option><option>NÃO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Recebe Ajuda de Custo?</label>
+              <select class="form-select" id="form-ajuda-rec">
+                <option value="">—</option><option>SIM</option><option>NÃO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Direito a Ajuda de Custo?</label>
+              <select class="form-select" id="form-ajuda-dir">
+                <option value="">—</option><option>SIM</option><option>NÃO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Valor Ajuda de Custo</label>
+              <input type="number" class="form-input" id="form-ajuda-val" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Recebe Comunhão Familiar?</label>
+              <select class="form-select" id="form-com-fam-rec">
+                <option value="">—</option><option>Sim</option><option>Não</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Direito a Comunhão Familiar?</label>
+              <select class="form-select" id="form-com-fam-dir">
+                <option value="">—</option><option>Sim</option><option>Não</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:8px;">
+            <label class="form-label">Observações Gerais</label>
+            <textarea class="form-textarea" id="form-obs" rows="3" placeholder="Observações..."></textarea>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:24px;justify-content:flex-end;">
+            <button class="btn btn-outline" onclick="goPage('lista',null)">Cancelar</button>
+            <button class="btn btn-danger btn-sm" id="btn-excluir" onclick="excluirPessoa()" style="display:none;">🗑️ Excluir</button>
+            <button class="btn btn-primary" onclick="salvarPessoa()" id="btn-salvar-pessoa">💾 Salvar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: MOVIMENTAÇÕES -->
+    <div class="page" id="page-movimentacoes">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Movimentações</div>
+          <div class="page-sub">Histórico de entradas, saídas e transferências</div>
+        </div>
+        <button class="export-btn" onclick="exportarMovimentacoes()">📥 Exportar</button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card stat-card-ok">
+          <div class="stat-label">📥 Entradas (30d)</div>
+          <div class="stat-value ok" id="mov-entradas">—</div>
+        </div>
+        <div class="stat-card stat-card-danger">
+          <div class="stat-label">📤 Saídas (30d)</div>
+          <div class="stat-value danger" id="mov-saidas">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🔄 Transferências (30d)</div>
+          <div class="stat-value lumen" id="mov-transf">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-header-title">Histórico de Movimentações</div></div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Tipo</th>
+                  <th>Pessoa</th>
+                  <th>Casa Origem</th>
+                  <th>Casa Destino</th>
+                  <th>Usuário</th>
+                  <th>Obs</th>
+                </tr>
+              </thead>
+              <tbody id="mov-tbody">
+                <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted);">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: IMPORTAR -->
+    <div class="page" id="page-importar">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Importar Excel</div>
+          <div class="page-sub">Faça upload da planilha Lista Geral para importar os dados</div>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:700px;">
+        <div class="card-header"><div class="card-header-title">📊 Upload da Planilha</div></div>
+        <div class="card-body">
+          <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()"
+            ondragover="event.preventDefault();this.classList.add('dragover')"
+            ondragleave="this.classList.remove('dragover')"
+            ondrop="handleDrop(event)">
+            <div class="upload-icon">📊</div>
+            <div class="upload-title">Clique ou arraste o Excel aqui</div>
+            <div class="upload-sub">Arquivo .xlsx com a aba "LISTA GERAL"</div>
+          </div>
+          <input type="file" id="file-input" style="display:none;" accept=".xlsx,.xls" onchange="lerArquivo(this.files[0])">
+
+          <div id="upload-preview" style="display:none;margin-top:20px;">
+            <div style="background:var(--lumen-lt);border-radius:8px;padding:12px 16px;margin-bottom:12px;">
+              <div style="font-weight:700;color:var(--lumen);margin-bottom:4px;" id="upload-info"></div>
+              <div style="font-size:12px;color:var(--text-muted);" id="upload-detalhe"></div>
+            </div>
+            <div style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">
+              <table style="font-size:11px;" id="preview-table"></table>
+            </div>
+            <div style="background:var(--warn-bg);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--warn);">
+              ⚠️ <strong>Atenção:</strong> A importação irá <strong>adicionar</strong> os registros ao banco de dados. Registros já existentes (mesmo nº de registro) serão atualizados.
+            </div>
+            <div style="display:flex;gap:10px;">
+              <button class="btn btn-primary" onclick="importarNoFirestore()">✅ Importar Dados</button>
+              <button class="btn btn-outline" onclick="cancelarUpload()">Cancelar</button>
+            </div>
+          </div>
+
+          <div id="upload-progress" style="display:none;margin-top:20px;text-align:center;padding:20px;">
+            <div class="spinner" style="margin:0 auto 12px;"></div>
+            <div id="upload-progress-txt" style="font-size:13px;color:var(--text-muted);">Importando...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end main-content -->
+</div><!-- end app-screen -->
+
+<!-- MODAL: DETALHE DA PESSOA -->
+<div class="modal-overlay hidden" id="modal-pessoa">
+  <div class="modal" style="max-width:900px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-pessoa-nome">—</div>
+        <div style="font-size:13px;color:var(--text-muted);" id="modal-pessoa-sub">—</div>
+      </div>
+      <button class="modal-close" onclick="fecharModal('modal-pessoa')">×</button>
+    </div>
+    <div class="modal-body" id="modal-pessoa-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="fecharModal('modal-pessoa')">Fechar</button>
+      <button class="btn btn-secondary" id="modal-btn-editar" onclick="">✏️ Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<script>
+// ──────────────────────────────────────────────
+// 🔥 FIREBASE CONFIG — SUBSTITUA COM SUAS CREDENCIAIS
+// ──────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "COLE_SUA_API_KEY_AQUI",
+  authDomain:        "COLE_SEU_AUTH_DOMAIN",
+  projectId:         "COLE_SEU_PROJECT_ID",
+  storageBucket:     "COLE_SEU_STORAGE_BUCKET",
+  messagingSenderId: "COLE_SEU_SENDER_ID",
+  appId:             "COLE_SEU_APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let todasPessoas = [];
+let pessoasFiltradas = [];
+let currentUserData = null;
+let charts = {};
+
+// ──────────────────────────────────────────────
+// 🔐 AUTH
+// ──────────────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    document.getElementById("auth-screen").style.display = "none";
+    document.getElementById("app-screen").style.display  = "block";
+    document.getElementById("topbar-user").textContent   = user.email;
+    await carregarDados();
+    const saved = localStorage.getItem("lp-theme");
+    if (saved === "dark") document.body.classList.add("dark-mode");
+  } else {
+    document.getElementById("auth-screen").style.display = "flex";
+    document.getElementById("app-screen").style.display  = "none";
+  }
+});
+
+async function doLogin() {
+  const email = document.getElementById("auth-email").value.trim();
+  const pass  = document.getElementById("auth-password").value;
+  const err   = document.getElementById("auth-error");
+  const btn   = document.getElementById("btn-login");
+  err.classList.remove("visible");
+  btn.disabled = true; btn.textContent = "Entrando...";
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    err.textContent = "E-mail ou senha incorretos.";
+    err.classList.add("visible");
+    btn.disabled = false; btn.textContent = "Entrar";
+  }
+}
+
+function doLogout() { auth.signOut(); }
+
+// ──────────────────────────────────────────────
+// 🗺️ NAVEGAÇÃO
+// ──────────────────────────────────────────────
+const PAGE_TITLES = {
+  dashboard:"Indicadores",lista:"Lista Geral",novo:"Pessoa",
+  "por-casa":"Por Casa",movimentacoes:"Movimentações",importar:"Importar Excel"
+};
+
+function goPage(page, btn) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".sidebar-item").forEach(b => b.classList.remove("active"));
+  const el = document.getElementById("page-" + page);
+  if (el) el.classList.add("active");
+  if (btn) btn.classList.add("active");
+  else {
+    const b = document.querySelector(`[data-page="${page}"]`);
+    if (b) b.classList.add("active");
+  }
+  document.getElementById("topbar-title").textContent = PAGE_TITLES[page] || page;
+  if (page === "dashboard") renderDashboard();
+  if (page === "lista") filtrarLista();
+  if (page === "por-casa") renderPorCasa();
+  if (page === "movimentacoes") carregarMovimentacoes();
+}
+
+// ──────────────────────────────────────────────
+// 📦 DADOS
+// ──────────────────────────────────────────────
+async function carregarDados() {
+  showToast("⏳ Carregando dados...", 2000);
+  try {
+    const snap = await db.collection("pessoas").orderBy("nome").get();
+    todasPessoas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    popularFiltros();
+    renderDashboard();
+    filtrarLista();
+    // Badge de ativos
+    const n = todasPessoas.filter(p => p.status === "Ativo").length;
+    const badge = document.getElementById("badge-ativos");
+    if (badge) { badge.textContent = n; badge.classList.remove("hidden"); }
+    showToast(`✅ ${todasPessoas.length} registros carregados!`);
+  } catch(e) {
+    showToast("❌ Erro ao carregar dados: " + e.message);
+  }
+}
+
+function popularFiltros() {
+  const casas = [...new Set(todasPessoas.map(p => p.casaAcolhimento).filter(Boolean))].sort();
+  const sel = document.getElementById("filtro-casa");
+  if (sel) sel.innerHTML = '<option value="">Todas</option>' + casas.map(c => `<option>${c}</option>`).join("");
+}
+
+// ──────────────────────────────────────────────
+// 📊 DASHBOARD
+// ──────────────────────────────────────────────
+function renderDashboard() {
+  const ativos   = todasPessoas.filter(p => p.status === "Ativo");
+  const inativos = todasPessoas.filter(p => p.status === "Inativo");
+  const vol      = todasPessoas.filter(p => ["Vol","Voluntário"].includes(p.status));
+  const outros   = todasPessoas.filter(p => ["DB","CSD","CSF"].includes(p.status));
+  const masc     = ativos.filter(p => p.genero === "Masculino");
+  const fem      = ativos.filter(p => p.genero === "Feminino");
+  const casas    = [...new Set(ativos.map(p => p.casaAcolhimento).filter(Boolean))];
+
+  const el = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+  el("kpi-ativos",   ativos.length);
+  el("kpi-total",    todasPessoas.length);
+  el("kpi-total-sub", ativos.length + " ativos de " + todasPessoas.length);
+  el("kpi-inativos", inativos.length);
+  el("kpi-vol",      vol.length);
+  el("kpi-outros",   outros.length);
+  el("kpi-casas",    casas.length);
+  el("kpi-masc",     masc.length);
+  el("kpi-fem",      fem.length);
+
+  renderChartCasas(ativos);
+  renderChartStatus();
+  renderChartEntradas();
+  renderChartMotivos(inativos);
+  renderBeneficios(ativos);
+  renderTopDias(ativos);
+}
+
+const CHART_COLORS = ["#2B9FA8","#E8C832","#1A7A44","#C0392B","#7B68EE","#FF8C00","#20B2AA","#FF6B6B","#4ECDC4","#45B7D1","#96CEB4","#FFEAA7"];
+
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function renderChartCasas(ativos) {
+  const porCasa = {};
+  ativos.forEach(p => { const c = p.casaAcolhimento||"Sem casa"; porCasa[c]=(porCasa[c]||0)+1; });
+  const entries = Object.entries(porCasa).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const ctx = document.getElementById("chart-por-casa");
+  if (!ctx) return;
+  destroyChart("casas");
+  charts["casas"] = new Chart(ctx, {
+    type:"bar",
+    data:{labels:entries.map(([k])=>k.length>25?k.slice(0,25)+"...":k),datasets:[{data:entries.map(([,v])=>v),backgroundColor:CHART_COLORS,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:"rgba(255,255,255,0.7)",font:{size:10}},grid:{color:"rgba(255,255,255,0.06)"}},
+               y:{ticks:{color:"rgba(255,255,255,0.7)"},grid:{color:"rgba(255,255,255,0.06)"}}}}
+  });
+}
+
+function renderChartStatus() {
+  const counts = {};
+  todasPessoas.forEach(p => { counts[p.status||"—"]=(counts[p.status||"—"]||0)+1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const ctx = document.getElementById("chart-status");
+  if (!ctx) return;
+  destroyChart("status");
+  charts["status"] = new Chart(ctx, {
+    type:"doughnut",
+    data:{labels:entries.map(([k])=>k),datasets:[{data:entries.map(([,v])=>v),backgroundColor:CHART_COLORS}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{color:"rgba(255,255,255,0.85)",font:{size:11},padding:10}}}}
+  });
+}
+
+function renderChartEntradas() {
+  const porMes = {};
+  const hoje = new Date();
+  for (let i=11;i>=0;i--) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth()-i, 1);
+    const key = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+    porMes[key] = 0;
+  }
+  todasPessoas.forEach(p => {
+    if (!p.dataEntrada) return;
+    const d = new Date(p.dataEntrada);
+    const key = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+    if (porMes.hasOwnProperty(key)) porMes[key]++;
+  });
+  const entries = Object.entries(porMes);
+  const ctx = document.getElementById("chart-entradas");
+  if (!ctx) return;
+  destroyChart("entradas");
+  charts["entradas"] = new Chart(ctx, {
+    type:"line",
+    data:{
+      labels:entries.map(([k])=>{ const [y,m]=k.split("-"); return ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"][parseInt(m)-1]+"/"+y.slice(2);}),
+      datasets:[{data:entries.map(([,v])=>v),borderColor:"#2B9FA8",backgroundColor:"rgba(43,159,168,0.15)",tension:0.3,fill:true,pointRadius:4}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:"rgba(255,255,255,0.7)",font:{size:10}},grid:{color:"rgba(255,255,255,0.06)"}},
+               y:{ticks:{color:"rgba(255,255,255,0.7)"},grid:{color:"rgba(255,255,255,0.06)"}}}}
+  });
+}
+
+function renderChartMotivos(inativos) {
+  const motivos = {};
+  inativos.forEach(p => { const m = p.motivoEspecifico||p.motivo||"Não informado"; motivos[m]=(motivos[m]||0)+1; });
+  const entries = Object.entries(motivos).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const ctx = document.getElementById("chart-motivos");
+  if (!ctx) return;
+  destroyChart("motivos");
+  charts["motivos"] = new Chart(ctx, {
+    type:"bar",
+    data:{labels:entries.map(([k])=>k.length>30?k.slice(0,30)+"...":k),datasets:[{data:entries.map(([,v])=>v),backgroundColor:"#C0392B",borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:"rgba(255,255,255,0.7)"},grid:{color:"rgba(255,255,255,0.06)"}},
+               y:{ticks:{color:"rgba(255,255,255,0.7)",font:{size:10}},grid:{color:"rgba(255,255,255,0.06)"}}}}
+  });
+}
+
+function renderBeneficios(ativos) {
+  const el = document.getElementById("dash-beneficios");
+  if (!el) return;
+  const bens = [
+    {label:"Plano de Saúde",key:"temPlanoSaude"},
+    {label:"Caju",key:"temCaju"},
+    {label:"Recebe Ajuda de Custo",key:"recebeAjudaCusto"},
+    {label:"Comunhão Familiar",key:"recebeComunhaoFamiliar"},
+    {label:"iClinic",key:"temIclinic"},
+  ];
+  el.innerHTML = bens.map(b => {
+    const sim = ativos.filter(p => p[b.key]==="SIM"||p[b.key]==="Sim").length;
+    const pct = ativos.length > 0 ? Math.round(sim/ativos.length*100) : 0;
+    return `<div><div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">${b.label}</div>
+      <div style="font-size:20px;font-weight:800;color:var(--lumen);">${sim}<span style="font-size:12px;color:var(--text-muted);font-weight:400;"> / ${ativos.length} (${pct}%)</span></div>
+      <div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join("");
+}
+
+function renderTopDias(ativos) {
+  const el = document.getElementById("dash-top-dias");
+  if (!el) return;
+  const sorted = [...ativos].sort((a,b)=>(parseInt(b.diasConosco)||0)-(parseInt(a.diasConosco)||0)).slice(0,10);
+  el.innerHTML = sorted.map((p,i) => `<tr>
+    <td style="font-weight:700;color:var(--text-muted);">#${i+1}</td>
+    <td style="font-weight:700;">${p.nome}</td>
+    <td style="font-size:12px;color:var(--text-muted);">${p.casaAcolhimento||"—"}</td>
+    <td><strong style="color:var(--lumen);">${p.diasConosco||0}</strong> dias</td>
+    <td style="font-size:12px;">${p.dataEntrada||"—"}</td>
+    <td>${badgeStatus(p.status)}</td>
+  </tr>`).join("");
+}
+
+// ──────────────────────────────────────────────
+// 🏠 POR CASA
+// ──────────────────────────────────────────────
+function renderPorCasa() {
+  const el = document.getElementById("casas-grid");
+  if (!el) return;
+  const casas = {};
+  todasPessoas.filter(p => p.status === "Ativo").forEach(p => {
+    const c = p.casaAcolhimento||"Sem casa";
+    if (!casas[c]) casas[c] = [];
+    casas[c].push(p);
+  });
+  const sorted = Object.entries(casas).sort(([,a],[,b])=>b.length-a.length);
+  el.innerHTML = sorted.map(([casa, pessoas]) => {
+    const masc = pessoas.filter(p=>p.genero==="Masculino").length;
+    const fem  = pessoas.filter(p=>p.genero==="Feminino").length;
+    return `<div class="card" style="cursor:pointer;" onclick="abrirDetalhesCasa('${casa.replace(/'/g,"\\'")}\')">
+      <div class="card-header" style="background:linear-gradient(135deg,var(--lumen-dark),var(--lumen));">
+        <div style="color:#fff;">
+          <div style="font-weight:800;font-size:15px;">${casa}</div>
+          <div style="font-size:12px;opacity:0.85;">${pessoas.length} pessoa(s) ativa(s)</div>
+        </div>
+        <div style="font-size:32px;font-weight:900;color:rgba(255,255,255,0.9);">${pessoas.length}</div>
+      </div>
+      <div class="card-body" style="padding:14px 20px;">
+        <div style="display:flex;gap:20px;font-size:13px;">
+          <span>👨 <strong>${masc}</strong> masc.</span>
+          <span>👩 <strong>${fem}</strong> fem.</span>
+        </div>
+        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:4px;">
+          ${pessoas.slice(0,5).map(p=>`<span style="font-size:11px;background:var(--lumen-lt);color:var(--lumen);padding:2px 8px;border-radius:10px;">${p.nome.split(" ")[0]}</span>`).join("")}
+          ${pessoas.length>5 ? `<span style="font-size:11px;background:var(--bg);color:var(--text-muted);padding:2px 8px;border-radius:10px;">+${pessoas.length-5} mais</span>` : ""}
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function abrirDetalhesCasa(casa) {
+  const pessoas = todasPessoas.filter(p => p.status==="Ativo" && p.casaAcolhimento===casa);
+  const modal = document.getElementById("modal-pessoa");
+  document.getElementById("modal-pessoa-nome").textContent = casa;
+  document.getElementById("modal-pessoa-sub").textContent = pessoas.length + " pessoa(s) ativa(s)";
+  document.getElementById("modal-btn-editar").style.display = "none";
+  document.getElementById("modal-pessoa-body").innerHTML = `
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nome</th><th>Gênero</th><th>Dias Conosco</th><th>Entrada</th><th>Classificação</th></tr></thead>
+      <tbody>
+        ${pessoas.map(p=>`<tr>
+          <td style="font-weight:700;">${p.nome}</td>
+          <td>${p.genero||"—"}</td>
+          <td><strong style="color:var(--lumen);">${p.diasConosco||0}</strong></td>
+          <td>${p.dataEntrada||"—"}</td>
+          <td>${p.classificacao||"—"}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table></div>`;
+  modal.classList.remove("hidden");
+}
+
+// ──────────────────────────────────────────────
+// 📋 LISTA + FILTROS
+// ──────────────────────────────────────────────
+function filtrarLista() {
+  const busca   = (document.getElementById("filtro-busca")?.value||"").toLowerCase();
+  const status  = document.getElementById("filtro-status")?.value||"";
+  const cls     = document.getElementById("filtro-class")?.value||"";
+  const casa    = document.getElementById("filtro-casa")?.value||"";
+  const genero  = document.getElementById("filtro-genero")?.value||"";
+
+  pessoasFiltradas = todasPessoas.filter(p => {
+    if (status && p.status !== status) return false;
+    if (cls    && p.classificacao !== cls) return false;
+    if (casa   && p.casaAcolhimento !== casa) return false;
+    if (genero && p.genero !== genero) return false;
+    if (busca) {
+      const txt = (p.nome+p.cpf+p.nRegistro+p.casaAcolhimento).toLowerCase();
+      if (!txt.includes(busca)) return false;
+    }
+    return true;
+  });
+
+  const el = document.getElementById("lista-count");
+  if (el) el.textContent = pessoasFiltradas.length + " pessoa(s) encontrada(s)";
+  renderTabela();
+}
+
+function renderTabela() {
+  const tb = document.getElementById("lista-tbody");
+  if (!tb) return;
+  if (!pessoasFiltradas.length) {
+    tb.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-muted);">Nenhum resultado encontrado.</td></tr>`;
+    return;
+  }
+  tb.innerHTML = pessoasFiltradas.slice(0,300).map(p => `<tr>
+    <td style="font-size:11px;color:var(--text-muted);">${p.nRegistro||"—"}</td>
+    <td style="font-weight:700;cursor:pointer;color:var(--lumen);" onclick="verPessoa('${p.id}')">${p.nome}</td>
+    <td>${badgeStatus(p.status)}</td>
+    <td style="font-size:12px;">${p.classificacao||"—"}</td>
+    <td style="font-size:12px;color:var(--text-muted);">${p.casaAcolhimento||"—"}</td>
+    <td style="font-size:12px;">${p.genero||"—"}</td>
+    <td style="font-size:11px;">${p.dataEntrada||"—"}</td>
+    <td style="text-align:center;font-weight:700;color:var(--lumen);">${p.diasConosco||0}</td>
+    <td style="text-align:center;white-space:nowrap;">
+      <button class="btn btn-secondary btn-sm" onclick="verPessoa('${p.id}')">Ver</button>
+      <button class="btn btn-outline btn-sm" onclick="editarPessoa('${p.id}')">✏️</button>
+    </td>
+  </tr>`).join("");
+  if (pessoasFiltradas.length > 300) {
+    tb.innerHTML += `<tr><td colspan="9" style="text-align:center;padding:10px;font-size:12px;color:var(--text-muted);">Mostrando 300 de ${pessoasFiltradas.length}. Use os filtros para refinar.</td></tr>`;
+  }
+}
+
+function limparFiltros() {
+  ["filtro-busca","filtro-status","filtro-class","filtro-casa","filtro-genero"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value="";
+  });
+  filtrarLista();
+}
+
+function badgeStatus(s) {
+  const map = {Ativo:"badge-ativo",Inativo:"badge-inativo",Vol:"badge-vol",DB:"badge-db",CSD:"badge-csd",CSF:"badge-csf"};
+  const cls = map[s]||"badge-gray";
+  return `<span class="badge ${cls}">${s||"—"}</span>`;
+}
+
+// ──────────────────────────────────────────────
+// 👤 VER / EDITAR PESSOA
+// ──────────────────────────────────────────────
+function verPessoa(id) {
+  const p = todasPessoas.find(x => x.id === id);
+  if (!p) return;
+  const modal = document.getElementById("modal-pessoa");
+  document.getElementById("modal-pessoa-nome").textContent = p.nome;
+  document.getElementById("modal-pessoa-sub").textContent  = (p.classificacao||"") + " · " + (p.casaAcolhimento||"—");
+  document.getElementById("modal-btn-editar").onclick = () => { fecharModal("modal-pessoa"); editarPessoa(id); };
+  document.getElementById("modal-btn-editar").style.display = "";
+
+  const rows = [
+    ["Nº Registro", p.nRegistro],
+    ["Status", badgeStatus(p.status)],
+    ["Classificação", p.classificacao],
+    ["Gênero", p.genero],
+    ["Data de Nascimento", p.dataNascimento],
+    ["CPF", p.cpf],
+    ["RG", p.rg],
+    ["Doc com Foto", p.docFoto],
+    ["Nome da Mãe", p.nomeMae],
+    ["Endereço", p.endereco],
+    ["Casa de Acolhimento", p.casaAcolhimento],
+    ["Casa que Serve", p.casaServe],
+    ["Data de Entrada", p.dataEntrada],
+    ["Dias a Descontar", p.diasDescontar],
+    ["Dias Conosco", `<strong style="color:var(--lumen);">${p.diasConosco||0} dias</strong>`],
+    ["Transferência 1", p.transf1],
+    ["Transferência 2", p.transf2],
+    ["Transferência 3", p.transf3],
+    ["Transferência 4", p.transf4],
+    ["Início Exp. Missionária", p.dataInicioExpMiss],
+    ["Início Voluntariado", p.dataInicioVoluntario],
+    ["Observações", p.observacoes],
+    ["Data de Saída", p.dataSaida],
+    ["Motivo de Saída", p.motivo],
+    ["Motivo Específico", p.motivoEspecifico],
+    ["Obs de Saída", p.obsSaida],
+    ["Alfabetizado", p.alfabetizado],
+    ["Validação Assist. Social", p.validacaoAssistSocial],
+    ["iClinic", p.temIclinic],
+    ["Plano de Saúde", p.temPlanoSaude],
+    ["Caju", p.temCaju],
+    ["Recebe Ajuda de Custo", p.recebeAjudaCusto],
+    ["Comunhão Familiar", p.recebeComunhaoFamiliar],
+    ["Servindo Atualmente", p.servindoAtualmente],
+  ].filter(([,v]) => v !== undefined && v !== null && v !== "" && v !== 0);
+
+  document.getElementById("modal-pessoa-body").innerHTML = rows.map(([l,v]) =>
+    `<div class="info-row"><span class="info-label">${l}</span><span class="info-value">${v}</span></div>`
+  ).join("");
+  modal.classList.remove("hidden");
+}
+
+function fecharModal(id) { document.getElementById(id)?.classList.add("hidden"); }
+
+function abrirFormPessoa(pessoa) {
+  const ids = ["form-id","form-registro","form-nome","form-cpf","form-rg","form-nascimento","form-endereco",
+    "form-mae","form-casa","form-casa-serve","form-entrada","form-dias-desc","form-transf1","form-transf2",
+    "form-transf3","form-transf4","form-exp-miss","form-vol-inicio","form-saida","form-obs-saida","form-obs",
+    "form-ajuda-val","form-assist-social"];
+  ids.forEach(id => { const el=document.getElementById(id); if(el) el.value=""; });
+  ["form-status","form-classificacao","form-genero","form-doc-foto","form-alfabetizado","form-iclinic",
+   "form-plano-dir","form-plano","form-caju","form-ajuda-rec","form-ajuda-dir","form-com-fam-rec",
+   "form-com-fam-dir","form-servindo","form-motivo","form-motivo-esp"].forEach(id => {
+    const el=document.getElementById(id); if(el) el.value=pessoa?.[campoParaForm(id)]||"";
+  });
+  const btnEx = document.getElementById("btn-excluir");
+
+  if (pessoa) {
+    document.getElementById("form-page-title").textContent = "Editar Pessoa";
+    document.getElementById("form-id").value          = pessoa.id;
+    document.getElementById("form-registro").value    = pessoa.nRegistro||"";
+    document.getElementById("form-nome").value        = pessoa.nome||"";
+    document.getElementById("form-cpf").value         = pessoa.cpf||"";
+    document.getElementById("form-rg").value          = pessoa.rg||"";
+    document.getElementById("form-nascimento").value  = pessoa.dataNascimento||"";
+    document.getElementById("form-endereco").value    = pessoa.endereco||"";
+    document.getElementById("form-mae").value         = pessoa.nomeMae||"";
+    document.getElementById("form-casa").value        = pessoa.casaAcolhimento||"";
+    document.getElementById("form-casa-serve").value  = pessoa.casaServe||"";
+    document.getElementById("form-entrada").value     = pessoa.dataEntrada||"";
+    document.getElementById("form-dias-desc").value   = pessoa.diasDescontar||"";
+    document.getElementById("form-transf1").value     = pessoa.transf1||"";
+    document.getElementById("form-transf2").value     = pessoa.transf2||"";
+    document.getElementById("form-transf3").value     = pessoa.transf3||"";
+    document.getElementById("form-transf4").value     = pessoa.transf4||"";
+    document.getElementById("form-exp-miss").value    = pessoa.dataInicioExpMiss||"";
+    document.getElementById("form-vol-inicio").value  = pessoa.dataInicioVoluntario||"";
+    document.getElementById("form-saida").value       = pessoa.dataSaida||"";
+    document.getElementById("form-obs-saida").value   = pessoa.obsSaida||"";
+    document.getElementById("form-obs").value         = pessoa.observacoes||"";
+    document.getElementById("form-ajuda-val").value   = pessoa.valorAjudaCusto||"";
+    document.getElementById("form-assist-social").value = pessoa.validacaoAssistSocial||"";
+    document.getElementById("form-status").value      = pessoa.status||"Ativo";
+    document.getElementById("form-classificacao").value = pessoa.classificacao||"Acolhido(a)";
+    document.getElementById("form-genero").value      = pessoa.genero||"Masculino";
+    document.getElementById("form-doc-foto").value    = pessoa.docFoto||"";
+    document.getElementById("form-alfabetizado").value = pessoa.alfabetizado||"";
+    document.getElementById("form-iclinic").value     = pessoa.temIclinic||"";
+    document.getElementById("form-plano-dir").value   = pessoa.direitoPlanoSaude||"";
+    document.getElementById("form-plano").value       = pessoa.temPlanoSaude||"";
+    document.getElementById("form-caju").value        = pessoa.temCaju||"";
+    document.getElementById("form-ajuda-rec").value   = pessoa.recebeAjudaCusto||"";
+    document.getElementById("form-ajuda-dir").value   = pessoa.direitoAjudaCusto||"";
+    document.getElementById("form-com-fam-rec").value = pessoa.recebeComunhaoFamiliar||"";
+    document.getElementById("form-com-fam-dir").value = pessoa.direitoComunhaoFamiliar||"";
+    document.getElementById("form-servindo").value    = pessoa.servindoAtualmente||"";
+    document.getElementById("form-motivo").value      = pessoa.motivo||"";
+    document.getElementById("form-motivo-esp").value  = pessoa.motivoEspecifico||"";
+    if (btnEx) btnEx.style.display = "inline-flex";
+  } else {
+    document.getElementById("form-page-title").textContent = "Nova Pessoa";
+    if (btnEx) btnEx.style.display = "none";
+  }
+}
+
+function campoParaForm(id) { return id; } // simplificado
+
+function editarPessoa(id) {
+  const p = todasPessoas.find(x => x.id === id);
+  if (!p) return;
+  abrirFormPessoa(p);
+  goPage("novo", null);
+}
+
+async function salvarPessoa() {
+  const nome = document.getElementById("form-nome").value.trim();
+  if (!nome) { showToast("❌ Nome é obrigatório!"); return; }
+
+  const btn = document.getElementById("btn-salvar-pessoa");
+  btn.disabled = true; btn.textContent = "Salvando...";
+
+  const dataEntrada = document.getElementById("form-entrada").value;
+  const diasDesc    = parseInt(document.getElementById("form-dias-desc").value)||0;
+  let diasConosco   = 0;
+  if (dataEntrada) {
+    const diff = Math.floor((Date.now() - new Date(dataEntrada).getTime()) / 86400000);
+    diasConosco = Math.max(0, diff - diasDesc);
+  }
+
+  const dados = {
+    nRegistro:             document.getElementById("form-registro").value.trim(),
+    nome,
+    status:                document.getElementById("form-status").value,
+    classificacao:         document.getElementById("form-classificacao").value,
+    genero:                document.getElementById("form-genero").value,
+    dataNascimento:        document.getElementById("form-nascimento").value,
+    cpf:                   document.getElementById("form-cpf").value.trim(),
+    rg:                    document.getElementById("form-rg").value.trim(),
+    docFoto:               document.getElementById("form-doc-foto").value,
+    nomeMae:               document.getElementById("form-mae").value.trim(),
+    endereco:              document.getElementById("form-endereco").value.trim(),
+    casaAcolhimento:       document.getElementById("form-casa").value.trim(),
+    casaServe:             document.getElementById("form-casa-serve").value.trim(),
+    dataEntrada,
+    diasDescontar:         diasDesc,
+    diasConosco,
+    transf1:               document.getElementById("form-transf1").value,
+    transf2:               document.getElementById("form-transf2").value,
+    transf3:               document.getElementById("form-transf3").value,
+    transf4:               document.getElementById("form-transf4").value,
+    dataInicioExpMiss:     document.getElementById("form-exp-miss").value,
+    dataInicioVoluntario:  document.getElementById("form-vol-inicio").value,
+    observacoes:           document.getElementById("form-obs").value.trim(),
+    dataSaida:             document.getElementById("form-saida").value,
+    motivo:                document.getElementById("form-motivo").value,
+    motivoEspecifico:      document.getElementById("form-motivo-esp").value,
+    obsSaida:              document.getElementById("form-obs-saida").value.trim(),
+    alfabetizado:          document.getElementById("form-alfabetizado").value,
+    validacaoAssistSocial: document.getElementById("form-assist-social").value.trim(),
+    temIclinic:            document.getElementById("form-iclinic").value,
+    direitoPlanoSaude:     document.getElementById("form-plano-dir").value,
+    temPlanoSaude:         document.getElementById("form-plano").value,
+    temCaju:               document.getElementById("form-caju").value,
+    recebeAjudaCusto:      document.getElementById("form-ajuda-rec").value,
+    direitoAjudaCusto:     document.getElementById("form-ajuda-dir").value,
+    valorAjudaCusto:       parseFloat(document.getElementById("form-ajuda-val").value)||0,
+    recebeComunhaoFamiliar:document.getElementById("form-com-fam-rec").value,
+    direitoComunhaoFamiliar:document.getElementById("form-com-fam-dir").value,
+    servindoAtualmente:    document.getElementById("form-servindo").value,
+    atualizadoEm:          firebase.firestore.FieldValue.serverTimestamp(),
+  };
+
+  try {
+    const docId = document.getElementById("form-id").value;
+    if (docId) {
+      await db.collection("pessoas").doc(docId).update(dados);
+      const idx = todasPessoas.findIndex(x => x.id === docId);
+      if (idx>=0) todasPessoas[idx] = { id:docId, ...dados };
+      showToast("✅ Pessoa atualizada!");
+      // Registra movimentação se status mudou
+      const ant = todasPessoas.find(x=>x.id===docId);
+      if (ant && ant.status !== dados.status) registrarMovimentacao("status", nome, ant.status, dados.status);
+    } else {
+      dados.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
+      const ref = await db.collection("pessoas").add(dados);
+      todasPessoas.push({ id: ref.id, ...dados });
+      registrarMovimentacao("entrada", nome, "", dados.casaAcolhimento);
+      showToast("✅ Pessoa cadastrada!");
+    }
+    goPage("lista", null);
+    filtrarLista();
+    renderDashboard();
+  } catch(e) {
+    showToast("❌ Erro ao salvar: " + e.message);
+  }
+  btn.disabled = false; btn.textContent = "💾 Salvar";
+}
+
+async function excluirPessoa() {
+  const id = document.getElementById("form-id").value;
+  if (!id) return;
+  const p = todasPessoas.find(x => x.id === id);
+  if (!confirm(`Excluir "${p?.nome}"? Esta ação não pode ser desfeita.`)) return;
+  try {
+    await db.collection("pessoas").doc(id).delete();
+    todasPessoas = todasPessoas.filter(x => x.id !== id);
+    showToast("✅ Pessoa excluída.");
+    goPage("lista", null);
+    filtrarLista();
+    renderDashboard();
+  } catch(e) {
+    showToast("❌ Erro ao excluir: " + e.message);
+  }
+}
+
+// ──────────────────────────────────────────────
+// 🔄 MOVIMENTAÇÕES
+// ──────────────────────────────────────────────
+async function registrarMovimentacao(tipo, nome, origem, destino) {
+  try {
+    await db.collection("movimentacoes").add({
+      tipo, nome, casaOrigem: origem, casaDestino: destino,
+      usuario: auth.currentUser?.email||"",
+      data: new Date().toISOString().slice(0,10),
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch(e) { console.error(e); }
+}
+
+async function carregarMovimentacoes() {
+  try {
+    const snap = await db.collection("movimentacoes").orderBy("criadoEm","desc").limit(200).get();
+    const movs = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const h30  = new Date(hoje); h30.setDate(hoje.getDate()-30);
+    const entradas30 = movs.filter(m=>m.tipo==="entrada" && new Date(m.data)>=h30).length;
+    const saidas30   = movs.filter(m=>m.tipo==="status" && new Date(m.data)>=h30).length;
+    const transf30   = movs.filter(m=>m.tipo==="transferencia" && new Date(m.data)>=h30).length;
+    const el=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    el("mov-entradas",entradas30); el("mov-saidas",saidas30); el("mov-transf",transf30);
+    const tb = document.getElementById("mov-tbody");
+    if (!tb) return;
+    tb.innerHTML = movs.map(m=>`<tr>
+      <td style="font-size:12px;">${m.data||"—"}</td>
+      <td><span class="badge ${m.tipo==="entrada"?"badge-ativo":m.tipo==="status"?"badge-warn":"badge-vol"}">${m.tipo}</span></td>
+      <td style="font-weight:700;">${m.nome||"—"}</td>
+      <td style="font-size:12px;color:var(--text-muted);">${m.casaOrigem||"—"}</td>
+      <td style="font-size:12px;">${m.casaDestino||"—"}</td>
+      <td style="font-size:11px;color:var(--text-muted);">${m.usuario||"—"}</td>
+      <td style="font-size:11px;color:var(--text-muted);">${m.obs||"—"}</td>
+    </tr>`).join("");
+  } catch(e) {
+    showToast("Erro ao carregar movimentações: "+e.message);
+  }
+}
+
+function exportarMovimentacoes() {
+  showToast("Em desenvolvimento!");
+}
+
+// ──────────────────────────────────────────────
+// 📥 IMPORTAR EXCEL
+// ──────────────────────────────────────────────
+let previewDados = [];
+
+function handleDrop(event) {
+  event.preventDefault();
+  document.getElementById("upload-area").classList.remove("dragover");
+  const file = event.dataTransfer.files[0];
+  if (file) lerArquivo(file);
+}
+
+function lerArquivo(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type:"array" });
+      const sheetName = wb.SheetNames.find(s=>s.toUpperCase().includes("LISTA"))||wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:"" });
+
+      // Encontra linha de cabeçalho
+      let hi = -1;
+      for (let i=0;i<Math.min(raw.length,5);i++) {
+        if (raw[i].some(c=>String(c).toUpperCase().includes("NOME"))) { hi=i; break; }
+      }
+      if (hi<0) { showToast("❌ Cabeçalho não encontrado!"); return; }
+
+      const headers = raw[hi].map(h=>String(h).trim().toUpperCase());
+      const dataRows = raw.slice(hi+1).filter(r=>r.some(c=>c!==""));
+
+      const getCol = (names) => {
+        for (const n of names) {
+          const idx = headers.findIndex(h=>h.includes(n));
+          if (idx>=0) return idx;
+        }
+        return -1;
+      };
+
+      const colMap = {
+        nRegistro: getCol(["Nº DE REGISTRO","N° DE REGISTRO","REGISTRO"]),
+        nome:      getCol(["NOME"]),
+        status:    getCol(["STATUS"]),
+        classi:    getCol(["CLASSIFICAÇÃO","CLASSIFICACAO"]),
+        nasc:      getCol(["DATA DE NASCIMENTO","NASCIMENTO"]),
+        genero:    getCol(["GÊNERO","GENERO"]),
+        cpf:       getCol(["CPF"]),
+        rg:        getCol(["RG"]),
+        docFoto:   getCol(["DOC COM FOTO"]),
+        casaServe: getCol(["CASA QUE SERVE"]),
+        mae:       getCol(["NOME DA MÃE","NOME DA MAE"]),
+        casaAcol:  getCol(["CASA DE ACOLHIMENTO"]),
+        entrada:   getCol(["ENTRADA"]),
+        diasDesc:  getCol(["DIAS A DESCONTAR"]),
+        diasCon:   getCol(["DIAS CONOSCO"]),
+        transf1:   getCol(["TRANSFERÊNCIA 1","TRANSFERENCIA 1"]),
+        transf2:   getCol(["TRANSFERÊNCIA 2","TRANSFERENCIA 2"]),
+        transf3:   getCol(["TRANSFERÊNCIA 3","TRANSFERENCIA 3"]),
+        transf4:   getCol(["TRANSFERÊNCIA 4","TRANSFERENCIA 4"]),
+        expMiss:   getCol(["DATA INICIO DA EXP"]),
+        volIni:    getCol(["DATA INICIO DO VOLUNTARIO"]),
+        obs:       getCol(["OBSERVAÇÕES","OBSERVACOES"]),
+        saida:     getCol(["SAÍDA","SAIDA"]),
+        motivo:    getCol(["MOTIVO"]),
+        motivoEsp: getCol(["MOTIVO ESPECIFICO"]),
+        obsSaida:  getCol(["OBSERVAÇÃO","OBSERVACAO"]),
+        alfab:     getCol(["ALFABETIZADO"]),
+        assistSoc: getCol(["VALIDAÇÃO","VALIDACAO"]),
+        iclinic:   getCol(["ICLINIC"]),
+        planoDireit: getCol(["TEM DIREITO A PLANO"]),
+        plano:     getCol(["TEM PLANO DE SAÚDE","TEM PLANO DE SAUDE"]),
+        caju:      getCol(["TEM CAJU"]),
+        ajudaRec:  getCol(["RECEBE AJUDA DE CUSTO"]),
+        ajudaDir:  getCol(["TEM DIREITO A AJUDA"]),
+        ajudaVal:  getCol(["VALOR DE AJUDA"]),
+        comFamRec: getCol(["RECEBE COMUNHÃO","RECEBE COMUNHAO"]),
+        comFamNec: getCol(["TEM NECESSIDADE"]),
+        comFamDir: getCol(["TEM DIREITO A COMUNHÃO","TEM DIREITO A COMUNHAO"]),
+        servindo:  getCol(["SERVINDO EM"]),
+        endereco:  getCol(["ENDEREÇO","ENDERECO"]),
+      };
+
+      const xlDate = s => {
+        if (!s||s==="") return "";
+        if (typeof s==="number") {
+          const d = new Date((s-25569)*86400000);
+          return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+        }
+        return String(s);
+      };
+      const get = (row,key) => colMap[key]>=0 ? row[colMap[key]] : "";
+
+      previewDados = dataRows.map(row => ({
+        nRegistro:              String(get(row,"nRegistro")||"").trim(),
+        nome:                   String(get(row,"nome")||"").trim(),
+        status:                 String(get(row,"status")||"").trim(),
+        classificacao:          String(get(row,"classi")||"").trim(),
+        dataNascimento:         xlDate(get(row,"nasc")),
+        genero:                 String(get(row,"genero")||"").trim(),
+        cpf:                    String(get(row,"cpf")||"").trim(),
+        rg:                     String(get(row,"rg")||"").trim(),
+        docFoto:                String(get(row,"docFoto")||"").trim(),
+        casaServe:              String(get(row,"casaServe")||"").trim(),
+        nomeMae:                String(get(row,"mae")||"").trim(),
+        casaAcolhimento:        String(get(row,"casaAcol")||"").trim(),
+        dataEntrada:            xlDate(get(row,"entrada")),
+        diasDescontar:          parseInt(get(row,"diasDesc"))||0,
+        diasConosco:            parseInt(get(row,"diasCon"))||0,
+        transf1:                xlDate(get(row,"transf1")),
+        transf2:                xlDate(get(row,"transf2")),
+        transf3:                xlDate(get(row,"transf3")),
+        transf4:                xlDate(get(row,"transf4")),
+        dataInicioExpMiss:      xlDate(get(row,"expMiss")),
+        dataInicioVoluntario:   xlDate(get(row,"volIni")),
+        observacoes:            String(get(row,"obs")||"").trim(),
+        dataSaida:              xlDate(get(row,"saida")),
+        motivo:                 String(get(row,"motivo")||"").trim(),
+        motivoEspecifico:       String(get(row,"motivoEsp")||"").trim(),
+        obsSaida:               String(get(row,"obsSaida")||"").trim(),
+        alfabetizado:           String(get(row,"alfab")||"").trim(),
+        validacaoAssistSocial:  String(get(row,"assistSoc")||"").trim(),
+        temIclinic:             String(get(row,"iclinic")||"").trim(),
+        direitoPlanoSaude:      String(get(row,"planoDireit")||"").trim(),
+        temPlanoSaude:          String(get(row,"plano")||"").trim(),
+        temCaju:                String(get(row,"caju")||"").trim(),
+        recebeAjudaCusto:       String(get(row,"ajudaRec")||"").trim(),
+        direitoAjudaCusto:      String(get(row,"ajudaDir")||"").trim(),
+        valorAjudaCusto:        parseFloat(get(row,"ajudaVal"))||0,
+        recebeComunhaoFamiliar: String(get(row,"comFamRec")||"").trim(),
+        direitoComunhaoFamiliar:String(get(row,"comFamDir")||"").trim(),
+        servindoAtualmente:     String(get(row,"servindo")||"").trim(),
+        endereco:               String(get(row,"endereco")||"").trim(),
+      })).filter(p => p.nome && p.nome.length > 1);
+
+      document.getElementById("upload-info").textContent    = `${previewDados.length} registros encontrados — Aba: ${sheetName}`;
+      document.getElementById("upload-detalhe").textContent = `Ativos: ${previewDados.filter(p=>p.status==="Ativo").length} · Inativos: ${previewDados.filter(p=>p.status==="Inativo").length}`;
+
+      const pt = document.getElementById("preview-table");
+      const cols = ["nRegistro","nome","status","casaAcolhimento","genero","dataEntrada"];
+      pt.innerHTML = `<thead><tr>${cols.map(c=>`<th style="padding:6px 10px;font-size:10px;background:var(--bg);text-transform:uppercase;">${c}</th>`).join("")}</tr></thead>
+        <tbody>${previewDados.slice(0,8).map(p=>`<tr>${cols.map(c=>`<td style="padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border);">${p[c]||"—"}</td>`).join("")}</tr>`).join("")}</tbody>`;
+
+      document.getElementById("upload-preview").style.display = "";
+      document.getElementById("upload-area").style.display    = "none";
+    } catch(err) {
+      showToast("❌ Erro ao ler arquivo: "+err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function cancelarUpload() {
+  document.getElementById("upload-preview").style.display = "none";
+  document.getElementById("upload-area").style.display    = "";
+  document.getElementById("file-input").value = "";
+  previewDados = [];
+}
+
+async function importarNoFirestore() {
+  if (!previewDados.length) return;
+  document.getElementById("upload-preview").style.display  = "none";
+  document.getElementById("upload-progress").style.display = "";
+  const progTxt = document.getElementById("upload-progress-txt");
+  const BATCH = 400;
+  let count = 0;
+  try {
+    // Busca registros existentes para fazer upsert
+    const existSnap = await db.collection("pessoas").get();
+    const existMap  = {};
+    existSnap.docs.forEach(d => {
+      const nr = d.data().nRegistro;
+      if (nr) existMap[nr] = d.id;
+    });
+
+    for (let i=0;i<previewDados.length;i+=BATCH) {
+      const lote = previewDados.slice(i,i+BATCH);
+      const batch = db.batch();
+      lote.forEach(p => {
+        p.importadoEm = firebase.firestore.FieldValue.serverTimestamp();
+        if (p.nRegistro && existMap[p.nRegistro]) {
+          batch.update(db.collection("pessoas").doc(existMap[p.nRegistro]), p);
+        } else {
+          batch.set(db.collection("pessoas").doc(), p);
+        }
+      });
+      await batch.commit();
+      count += lote.length;
+      progTxt.textContent = `Importando... ${count} de ${previewDados.length}`;
+    }
+    document.getElementById("upload-progress").style.display = "none";
+    document.getElementById("upload-area").style.display     = "";
+    document.getElementById("file-input").value = "";
+    previewDados = [];
+    showToast(`✅ ${count} registros importados!`);
+    await carregarDados();
+    goPage("lista", null);
+  } catch(e) {
+    document.getElementById("upload-progress").style.display = "none";
+    document.getElementById("upload-area").style.display     = "";
+    showToast("❌ Erro na importação: "+e.message);
+  }
+}
+
+// ──────────────────────────────────────────────
+// 📤 EXPORTAR EXCEL
+// ──────────────────────────────────────────────
+function exportarExcel() {
+  const dados = pessoasFiltradas.length > 0 ? pessoasFiltradas : todasPessoas;
+  if (!dados.length) { showToast("Nenhum dado para exportar!"); return; }
+
+  const header = ["Nº Registro","Nome","Status","Classificação","Gênero","Data Nascimento",
+    "CPF","RG","Doc Foto","Casa Acolhimento","Casa que Serve","Nome da Mãe",
+    "Entrada","Dias Descontar","Dias Conosco","Transf 1","Transf 2","Transf 3","Transf 4",
+    "Início Exp Miss","Início Voluntariado","Observações","Saída","Motivo","Motivo Esp","Obs Saída",
+    "Alfabetizado","Assist Social","iClinic","Dir Plano Saúde","Tem Plano","Caju",
+    "Recebe Ajuda Custo","Dir Ajuda Custo","Valor Ajuda","Recebe Comunhão","Dir Comunhão",
+    "Servindo","Endereço"];
+
+  const rows = [header, ...dados.map(p => [
+    p.nRegistro,p.nome,p.status,p.classificacao,p.genero,p.dataNascimento,
+    p.cpf,p.rg,p.docFoto,p.casaAcolhimento,p.casaServe,p.nomeMae,
+    p.dataEntrada,p.diasDescontar,p.diasConosco,p.transf1,p.transf2,p.transf3,p.transf4,
+    p.dataInicioExpMiss,p.dataInicioVoluntario,p.observacoes,p.dataSaida,p.motivo,p.motivoEspecifico,p.obsSaida,
+    p.alfabetizado,p.validacaoAssistSocial,p.temIclinic,p.direitoPlanoSaude,p.temPlanoSaude,p.temCaju,
+    p.recebeAjudaCusto,p.direitoAjudaCusto,p.valorAjudaCusto,p.recebeComunhaoFamiliar,p.direitoComunhaoFamiliar,
+    p.servindoAtualmente,p.endereco
+  ])];
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = rows[0].map((_,i) => ({ wch: i<2?30:i===1?40:18 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "LISTA GERAL");
+  XLSX.writeFile(wb, "LM-Pessoas-"+new Date().toISOString().slice(0,10)+".xlsx");
+  showToast("✅ Excel exportado!");
+}
+
+// ──────────────────────────────────────────────
+// 🎨 UI HELPERS
+// ──────────────────────────────────────────────
+function showToast(msg, duration=3500) {
+  const c = document.getElementById("toast-container");
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), duration);
+}
+
+function toggleTheme() {
+  const dark = document.body.classList.toggle("dark-mode");
+  localStorage.setItem("lp-theme", dark?"dark":"light");
+}
+</script>
+</body>
+</html>
